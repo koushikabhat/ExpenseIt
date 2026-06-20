@@ -1,4 +1,4 @@
-import { TextInput, TouchableOpacity, View, StyleSheet } from "react-native"
+import { TextInput, TouchableOpacity, View, StyleSheet, ScrollView } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import ScreenHeader from "../components/ScreenHeader";
 import { BoldText, RegularText } from "../utils/Texts";
@@ -8,113 +8,62 @@ import { useTheme } from "../theme/ThemeProvider";
 
 
 const AddScreen  = () => {
+  const {theme} = useTheme();
+  const styles = createstylesSheet(theme);
 
-    const {theme} = useTheme();
-    const styles = createstylesSheet(theme);
+  return(
+    <SafeAreaView style={{flex : 1, backgroundColor : theme.colors.background, paddingTop : 18}}>
+      <ScrollView style={{flex :1, marginBottom : 18}}>
 
-    return(
-      <SafeAreaView style={{flex : 1}}>
-        <ScreenHeader title="Add Expense" showBack />
-
-        <View style={styles.content}>
-          <View style={styles.iconWrapper}>
-            <Ionicons
-              name="wallet-outline"
-              size={40}
-              color={theme.colors.primary}
-            />
-          </View>
-
-          <View style={{justifyContent : "center", alignContent : "center", alignItems : 'center'}}> 
-            <BoldText size={24}>Quick Add Expense </BoldText>
-          </View>
-
-          <RegularText
-            color={theme.colors.text}
-            style={styles.subtitle}>
-            Track your spending in seconds
-          </RegularText>
-
-          <View style={styles.card}>
-            {/* Amount */}
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="cash-outline"
-                size={22}
-                color={theme.colors.primary}
-              />
-
-              <TextInput
-                placeholder="Enter Amount"
-                keyboardType="numeric"
-                style={styles.input}
-              />
-            </View>
-
-            {/* Category */}
-            <TouchableOpacity style={styles.inputContainer}>
-              <Ionicons
-                name="pricetag-outline"
-                size={22}
-                color={theme.colors.primary}
-              />
-
-              <RegularText style={{flex: 1, marginLeft: 15}}>
-                Select Category
-              </RegularText>
-
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
-
-            {/* Create Category */}
-            <TouchableOpacity style={styles.inputContainer}>
-              <Ionicons
-                name="add-circle-outline"
-                size={22}
-                color={theme.colors.primary}
-              />
-
-              <RegularText style={{marginLeft : 15}}>
-                Create New Category
-              </RegularText>
-            </TouchableOpacity>
-
-            {/* Note */}
-            <View style={[ styles.inputContainer, styles.noteContainer]}>
-              <Ionicons
-                name="document-text-outline"
-                size={22}
-                color={theme.colors.primary}
-              />
-
-              <TextInput
-                placeholder="Add a note here realted to the expense optional... "
-                multiline
-                style={styles.noteInput}
-              />
-            </View>
-
-            {/* Button */}
-            <TouchableOpacity style={styles.button}>
-              <Ionicons
-                name="add-outline"
-                size={22}
-                color="#FFF"
-              />
-
-              <BoldText color="#FFF">
-                Add Expense
-              </BoldText>
-            </TouchableOpacity>
-            
-          </View>
+      <View style={styles.content}>
+        <View style={styles.iconWrapper}>
+          <Ionicons name="wallet-outline" size={40} color={theme.colors.primary} />
         </View>
-      </SafeAreaView>
-    );
+
+        <View style={{justifyContent : "center", alignContent : "center", alignItems : 'center'}}> 
+          <BoldText size={24} color={theme.colors.text}>Quick Add Expense </BoldText>
+        </View>
+
+        <RegularText color={theme.colors.text} style={styles.subtitle}> Track your spending in seconds </RegularText>
+
+        <View style={styles.card}>
+
+          {/* Amount */}
+          <View style={styles.inputContainer}>
+            <Ionicons name="cash-outline" size={22} color={theme.colors.primary} />
+            <TextInput placeholder="Enter Amount" keyboardType="numeric" style={styles.input} />
+          </View>
+
+          {/* Category */}
+          <TouchableOpacity style={styles.inputContainer}>
+            <Ionicons name="pricetag-outline" size={22} color={theme.colors.primary}/>
+            <RegularText style={{flex: 1, marginLeft: 15}} color={theme.colors.text}> Select Category</RegularText>
+            <Ionicons name="chevron-down" size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+
+          {/* Create Category */}
+          <TouchableOpacity style={styles.inputContainer}>
+            <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary}/>
+            <RegularText style={{marginLeft : 15}} color={theme.colors.text}> Create New Category </RegularText>
+          </TouchableOpacity>
+
+          {/* Note */}
+          <View style={[ styles.inputContainer, styles.noteContainer]}>
+            <Ionicons name="document-text-outline" size={22} color={theme.colors.primary}/>
+            <TextInput placeholder="Add a note here realted to the expense optional... " multiline style={styles.noteInput}/>
+          </View>
+
+          {/* Button */}
+          <TouchableOpacity style={styles.button}>
+            <Ionicons name="add-outline" size={22} color="#FFF"/>
+            <BoldText color="#FFF"> Add Expense </BoldText>
+          </TouchableOpacity>
+          
+        </View>
+      </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
 
 export default AddScreen;

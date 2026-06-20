@@ -7,14 +7,19 @@ import AddScreen from '../screens/AddScreen';
 import OverviewScreen from '../screens/OverviewScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import HomeTabScreens from './HomeStack';
+import { useTheme } from '../theme/ThemeProvider';
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
+  const {theme} = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({route}) => ({
         headerShown: false,
+
+
         tabBarIcon: ({color, size}) => {
           let iconName = '';
 
@@ -51,6 +56,12 @@ export default function TabNavigator() {
             />
           );
         },
+
+        tabBarStyle: { backgroundColor: theme.colors.card , paddingTop : 2, paddingBottom : 2, height: 60, borderColor : theme.colors.background, borderWidth : 1},
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarLabelStyle: { color: theme.colors.text },
+
+        
       })}>
       <Tab.Screen
         name="HomeTabScreens"
