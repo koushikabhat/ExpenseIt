@@ -183,8 +183,8 @@ const HomeScreen = () => {
                 theme={theme}
                 onAddExpense={() => navigation.navigate('AddScreen')}
                 onSetupBudget={() => navigation.navigate('BudgetScreen')}
-                onSetupCategory={() => navigation.navigate('CategorySetupScreen')}
-                onViewCategories={() => navigation.navigate('CategoriesScreen')}
+                onSetupCategory={() => navigation.navigate('CategoryListScreen')}
+                onViewCategories={() => navigation.navigate('CategoryListScreen')}
               />
 
               {/* Recent Activities header */}

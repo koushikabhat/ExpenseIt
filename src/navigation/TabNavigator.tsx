@@ -8,6 +8,7 @@ import OverviewScreen from '../screens/OverviewScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import HomeTabScreens from './HomeStack';
 import { useTheme } from '../theme/ThemeProvider';
+import OverViewTab from './OverviewStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -36,7 +37,7 @@ export default function TabNavigator() {
               iconName = 'add-circle';
               break;
 
-            case 'Overview':
+            case 'OverViewTab':
               iconName = 'pie-chart';
               break;
 
@@ -66,11 +67,27 @@ export default function TabNavigator() {
       <Tab.Screen
         name="HomeTabScreens"
         component={HomeTabScreens}
+
+        listeners={({ navigation }) => ({
+          tabPress: e => {
+            navigation.navigate('HomeTabScreens', {
+              screen: 'HomeScreen',
+            });
+          },
+        })}
+        
       />
 
       <Tab.Screen
-        name="Overview"
-        component={OverviewScreen}
+        name="OverViewTab"
+        component={OverViewTab}
+        listeners={({ navigation }) => ({
+          tabPress: e => {
+            navigation.navigate('OverViewTab', {
+              screen: 'OverviewScreen',
+            });
+          },
+        })}
       />
 
       <Tab.Screen
