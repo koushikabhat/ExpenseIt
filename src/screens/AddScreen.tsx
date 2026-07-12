@@ -1,15 +1,45 @@
-import { TextInput, TouchableOpacity, View, StyleSheet, ScrollView } from "react-native"
+import { TextInput, TouchableOpacity, View, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import ScreenHeader from "../components/ScreenHeader";
 import { BoldText, RegularText } from "../utils/Texts";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AppTheme } from "../theme/constant";
 import { useTheme } from "../theme/ThemeProvider";
+import { useState } from "react";
+import { addExpense } from "../api/services/expenseServices";
 
 
 const AddScreen  = () => {
   const {theme} = useTheme();
   const styles = createstylesSheet(theme);
+
+  const [loading, setLoading] = useState(false);
+
+  // states for amount , note, 
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [expenseDate, setExpenseDate] = useState("2026-07-09")
+
+  const handelAddExpense = async() => {
+    if(loading) return;
+
+    try{
+      setLoading(true)
+      const resposne = await addExpense("6a4fbcfe5f94153e3fcff1f0",amount,  expenseDate, note  );
+      if(resposne?.data?.success){
+        // reset states
+        setAmount("");
+        setNote("");
+      }
+    }catch(error : any){
+      console.log("error while aadding the expense", error?.resposne?.data )
+    }finally{
+      setLoading(false);
+      setAmount("");
+      setNote("");
+    }
+  };
+
 
   return(
     <SafeAreaView style={{flex : 1, backgroundColor : theme.colors.background, paddingTop : 18}}>
@@ -31,7 +61,13 @@ const AddScreen  = () => {
           {/* Amount */}
           <View style={styles.inputContainer}>
             <Ionicons name="cash-outline" size={22} color={theme.colors.primary} />
-            <TextInput placeholder="Enter Amount" keyboardType="numeric" style={styles.input} />
+            <TextInput 
+              value={amount} 
+              onChangeText={(text) => setAmount(text)}
+              placeholder="Enter Amount" 
+              keyboardType="numeric" 
+              style={styles.input} 
+            />
           </View>
 
           {/* Category */}
@@ -50,13 +86,21 @@ const AddScreen  = () => {
           {/* Note */}
           <View style={[ styles.inputContainer, styles.noteContainer]}>
             <Ionicons name="document-text-outline" size={22} color={theme.colors.primary}/>
-            <TextInput placeholder="Add a note here realted to the expense optional... " multiline style={styles.noteInput}/>
+            <TextInput  
+              value={note}
+              onChangeText={(text) => setNote(text)}
+              placeholder="Add a note here realted to the expense optional... " 
+              multiline style={styles.noteInput}/>
           </View>
 
           {/* Button */}
-          <TouchableOpacity style={styles.button}>
-            <Ionicons name="add-outline" size={22} color="#FFF"/>
-            <BoldText color="#FFF"> Add Expense </BoldText>
+          <TouchableOpacity style={styles.button} onPress={handelAddExpense}>
+            {loading ? <ActivityIndicator size={20} color={theme.colors.text}/> : (
+              <>
+                <Ionicons name="add-outline" size={22} color="#FFF"/>
+                <BoldText color="#FFF"> Add Expense </BoldText>
+              </>
+            )}
           </TouchableOpacity>
           
         </View>

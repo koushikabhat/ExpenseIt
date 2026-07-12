@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   TouchableOpacity,
   StyleSheet,
   FlatList,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -15,6 +16,11 @@ import {useTheme} from '../theme/ThemeProvider';
 import {BoldText, RegularText, SemiBoldText} from '../utils/Texts';
 import {QuickActions} from '../components/Home/QuickActions';
 import {AppTheme} from '../theme/constant';
+import { fetchDashboardData } from '../api/services/dashboardService';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUser } from '../store/user/userSlice';
+import { expenseData, setBudgetData, setRecentExpenses } from '../store/expenses/expenseSlice';
+import { RootState } from '../store';
 
 
 const BUDGET      = 50000;
@@ -31,53 +37,112 @@ const recentActivities = [
 
 
 const HomeScreen = () => {
+
   const {theme}      = useTheme();
   const navigation: any = useNavigation();
   const styles       = createStyles(theme);
+  const dispatch = useDispatch();
+
+
+  const { name } = useSelector((state :  RootState) => state.user);
+  const { budget, recentExpenses } = useSelector((state : RootState) => state.expense);
+
+  //refresh  state 
+  const [refreshing, setRefreshing] = useState(false);
+
 
   // Progress bar color reacts to how much budget is consumed
   const progressColor = USED_PCT >= 90 ? theme.colors.danger : USED_PCT >= 70 ? '#F59E0B' : 'rgba(255,255,255,0.9)';
 
-  const renderActivity = ({item}: any) => (
-    <TouchableOpacity
-      activeOpacity={0.75}
-      style={[styles.activityCard, {backgroundColor: theme.colors.card}]}
-    >
-      {/* Left icon */}
-      <View style={[styles.iconContainer, {backgroundColor: `${theme.banner.accent}14`}]}>
-        <Ionicons name={item.icon} size={22} color={theme.banner.accent} />
-      </View>
+  const fetchData = async() => {
+    try{
+      console.log("\n\n\n Calling the Dashboard Data ..............")
+      const resposne = await fetchDashboardData();
 
-      {/* Title + subtitle */}
-      <View style={styles.activityContent}>
-        <BoldText color={theme.colors.text}>{item.title}</BoldText>
-        <RegularText color={theme.colors.text} style={{opacity: 0.5}}>
-          {item.subtitle}
-        </RegularText>
-      </View>
+      if(resposne.data?.success){
 
-      {/* Amount + time */}
-      <View style={styles.right}>
-        <BoldText color={theme.colors.text}>{item.amount}</BoldText>
-        <RegularText color={theme.colors.text} style={{opacity: 0.45}}>
-          {item.time}
-        </RegularText>
-      </View>
+        const user_data = resposne?.data?.data?.user;
+        dispatch(setUser({name :user_data.name, email : user_data.email}))
 
-      <Ionicons name="chevron-forward" size={16} color={theme.colors.text} style={{opacity: 0.25}} />
-    </TouchableOpacity>
-  );
+        const recent_expenses  = resposne?.data?.data?.expenses;
+        dispatch(setBudgetData({budget : user_data.budget ?? 0, peroid : user_data.peroid ?? ""}))
+
+        // set expenses data here recent expenses 
+        dispatch(setRecentExpenses(recent_expenses))
+        console.log("recent expenses are ",recent_expenses)
+      }
+
+    }catch(error : any){
+      console.log("the error is ",error?.resposne?.data)
+    }
+  }
+
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await fetchData();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+  
+  const renderActivity = ({item}: any) => {
+    const date = new Date(item.expense_date).toLocaleDateString();
+    const shortNote = item.expense_note ? item.expense_note.split(" ").slice(0, 5).join(" ") + (item.expense_note.split(" ").length > 3 ? "..." : "")
+    : "No note";
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.75}
+        style={[styles.activityCard, {backgroundColor: theme.colors.card}]}
+      >
+        {/* Left icon */}
+        <View style={[styles.iconContainer, {backgroundColor: `${theme.banner.accent}14`}]}>
+          <Ionicons name={item.category_icon} size={22} color={theme.banner.accent} />
+        </View>
+  
+        {/* Title + subtitle */}
+        <View style={styles.activityContent}>
+          <BoldText color={theme.colors.text}>{item.category_name}</BoldText>
+          <RegularText color={theme.colors.text} style={{opacity: 0.5}}>
+            {shortNote}
+          </RegularText>
+        </View>
+  
+        {/* Amount + time */}
+        <View style={styles.right}>
+          <BoldText color={theme.colors.text}>{item.amount}</BoldText>
+          <RegularText color={theme.colors.text} style={{opacity: 0.45}}>
+            {date}
+          </RegularText>
+        </View>
+  
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.text} style={{opacity: 0.25}} />
+      </TouchableOpacity>
+    );
+  }
+
 
   return (
     <SafeAreaView style={[styles.container, {backgroundColor: theme.colors.background}]}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.banner.accent} translucent />
+      {/* <StatusBar barStyle="light-content" backgroundColor={theme.banner.accent} translucent /> */}
       
       <FlatList
-        data={recentActivities}
-        keyExtractor={item => item.id}
+        data={recentExpenses}
+        keyExtractor={(item : expenseData) => item.expense_id}
         renderItem={renderActivity}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 36}}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+          />
+        }
         ListHeaderComponent={
           <>
             <LinearGradient
@@ -95,7 +160,7 @@ const HomeScreen = () => {
               <View style={styles.navRow}>
                 <View>
                   <SemiBoldText style={styles.greeting}>Good morning 👋</SemiBoldText>
-                  <BoldText style={styles.screenTitle}>Hi, User!</BoldText>
+                  <BoldText style={styles.screenTitle}>Hi, {name}</BoldText>
                 </View>
                 <TouchableOpacity
                   style={styles.notifBtn}
@@ -133,7 +198,7 @@ const HomeScreen = () => {
                     <SemiBoldText style={styles.summaryLabel}>Budget</SemiBoldText>
                   </View>
                   <BoldText style={styles.summaryAmount}>
-                    ₹{BUDGET.toLocaleString()}
+                    ₹{budget.toLocaleString()}
                   </BoldText>
                 </View>
 

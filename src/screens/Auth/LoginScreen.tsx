@@ -9,11 +9,18 @@ import {
   Platform,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import {BoldText, RegularText, SemiBoldText} from '../../utils/Texts';
+import { setLogin } from '../../store/user/userSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { login } from '../../api/services/authService';
+import { useTheme } from '../../theme/ThemeProvider';
+import { setCredentials } from '../../store/auth/authSlice';
+import { storage } from '../../storage/mmkv';
 
 // ── Drop your cropped images here ────────────────────────────────────────────
 const LOGO_ICON = require('../../assets/images/logo_image.png');   // rounded square
@@ -31,14 +38,61 @@ const GREEN_2    = '#06D6A0';  // matches logo gradient end
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const LoginScreen = ({navigation}: any) => {
-  const [email, setEmail]         = useState('');
-  const [password, setPassword]   = useState('');
+
+  const {theme} = useTheme();
+
+  const dispatch = useDispatch();
+  const { email, password } = useSelector((state : any) => state.user);
+
   const [showPass, setShowPass]   = useState(false);
   const [focusedField, setFocus]  = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // plug in your auth logic here
+
+  const handleLogin = async() => {
+    console.log("Handle login is clicked ");
+    console.log("email and password are", email, password);
+
+    if(!email || !password){
+      return;
+    }
+
+    const pass = password.trim()
+
+    try{
+      setLoading(true);
+
+      const result = await login(email, pass);
+
+      if(result?.data.success){
+        
+        const data = result?.data.data;
+
+        // store token in mmkv
+        storage.set("access_token", data.access_token);
+        storage.set("refresh_token", data.refresh_token);
+        storage.set("access_expires_in", data.access_expires_in);
+        storage.set("refresh_expires_in", data.refresh_expires_in);
+
+        //update redux
+        dispatch(setCredentials({
+          access_token : data.access_token,
+          refresh_token : data.refresh_token,
+          access_expires_in : data.access_expires_in,
+          refresh_expires_in: data.refresh_expires_in,
+          isAuthenticated : true
+        }))
+      }
+    }
+    catch(error){
+      dispatch(setCredentials({ isAuthenticated : false}));
+    }
+    finally{
+      setLoading(false);
+    }
   };
+
+
 
   const handleGoogle = () => {
     // plug in Google Sign-In here
@@ -84,7 +138,9 @@ const LoginScreen = ({navigation}: any) => {
               <Ionicons name="mail-outline" size={18} color={focusedField === 'email' ? GREEN_1 : TEXT_MUTED} />
               <TextInput
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(v: any) => 
+                  dispatch(setLogin({email : v}))
+                }
                 placeholder="Email address"
                 placeholderTextColor={TEXT_MUTED}
                 keyboardType="email-address"
@@ -103,7 +159,7 @@ const LoginScreen = ({navigation}: any) => {
               <Ionicons name="lock-closed-outline" size={18} color={focusedField === 'password' ? GREEN_1 : TEXT_MUTED} />
               <TextInput
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(v) => dispatch(setLogin({password : v}))}
                 placeholder="Password"
                 placeholderTextColor={TEXT_MUTED}
                 secureTextEntry={!showPass}
@@ -133,7 +189,7 @@ const LoginScreen = ({navigation}: any) => {
                 end={{x: 1, y: 0}}
                 style={styles.loginBtn}
               >
-                <BoldText style={styles.loginBtnText}>Sign In</BoldText>
+                {loading ?  <ActivityIndicator size={20} color={theme.colors.text}/> : <BoldText style={styles.loginBtnText}>Log In</BoldText> }
               </LinearGradient>
             </TouchableOpacity>
 
