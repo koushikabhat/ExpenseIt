@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useDispatch } from "react-redux"
 import { storage } from "../storage/mmkv";
 import { clearCredentials, setCredentials } from "../store/auth/authSlice";
+import { getAllCategories } from "../api/services/categoryService";
+import { setCategories } from "../store/category/categorySlice";
 
 
 export const useAppBootstrap = () => {
@@ -24,6 +26,13 @@ export const useAppBootstrap = () => {
                     
                 // }))
 
+                getAllCategories()
+                .then((res) => {
+                    if(res.data.success){
+                        dispatch(setCategories(res.data.data.categories))
+                    }
+                })
+                .catch((err : any) => console.log("category fetch failed", err?.response?.data))
 
             }catch(error : any){
                 dispatch(clearCredentials());

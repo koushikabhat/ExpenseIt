@@ -5,8 +5,10 @@ import { BoldText, RegularText } from "../utils/Texts";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { AppTheme } from "../theme/constant";
 import { useTheme } from "../theme/ThemeProvider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { addExpense } from "../api/services/expenseServices";
+import { getAllCategories } from "../api/services/categoryService";
+import CategoryModal from "../components/CategoryModal";
 
 
 const AddScreen  = () => {
@@ -14,6 +16,8 @@ const AddScreen  = () => {
   const styles = createstylesSheet(theme);
 
   const [loading, setLoading] = useState(false);
+  const [openCategorymodal, setOpenCategoryModal] = useState(false);
+
 
   // states for amount , note, 
   const [amount, setAmount] = useState("");
@@ -39,6 +43,7 @@ const AddScreen  = () => {
       setNote("");
     }
   };
+
 
 
   return(
@@ -71,7 +76,7 @@ const AddScreen  = () => {
           </View>
 
           {/* Category */}
-          <TouchableOpacity style={styles.inputContainer}>
+          <TouchableOpacity style={styles.inputContainer} onPress={() => setOpenCategoryModal(true)}>
             <Ionicons name="pricetag-outline" size={22} color={theme.colors.primary}/>
             <RegularText style={{flex: 1, marginLeft: 15}} color={theme.colors.text}> Select Category</RegularText>
             <Ionicons name="chevron-down" size={20} color={theme.colors.text} />
@@ -106,6 +111,14 @@ const AddScreen  = () => {
         </View>
       </View>
       </ScrollView>
+
+      <CategoryModal 
+        visible={openCategorymodal} 
+        onClose={ () => setOpenCategoryModal(false)}   
+        allCount={10}
+        customCount={20}
+      />
+
     </SafeAreaView>
   );
 }

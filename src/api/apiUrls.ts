@@ -5,5 +5,6 @@ export const apiUrls = {
 
     "addExpense" : "/api/v1/expense/add",
 
+    "getAllCategories" : "/api/v1/category/all"
     
 }
