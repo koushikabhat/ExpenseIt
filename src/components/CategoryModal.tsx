@@ -135,6 +135,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
+import { categoryData } from "../store/category/categorySlice";
 const { height } = Dimensions.get("screen");
 
 interface CategoryModalProps {
@@ -142,17 +143,17 @@ interface CategoryModalProps {
   onClose: () => void;
   allCount?: number;
   customCount?: number;
+  selectedCategory : categoryData | null | undefined;
+  onSelectCategory : (category : categoryData) => void;
 }
 
-const CategoryModal = ({ visible, onClose, allCount = 0, customCount = 0 }: CategoryModalProps) => {
+const CategoryModal = ({ visible, onClose, selectedCategory , onSelectCategory, allCount = 0, customCount = 0 }: CategoryModalProps) => {
   const { theme } = useTheme();
   const styles = createStyles(theme);
   const {categories} = useSelector((state : RootState) => state.category);
-
   const slideAnim = useRef(new Animated.Value(height)).current;
   const [activeFilter, setActiveFilter] = React.useState<"all" | "custom">("all");
   const [searchText, setSearchText] = useState("");
-  const [selectedCatId, setSelectedCatId] = useState("");
   
   useEffect(() => {
     if (visible) {
@@ -231,12 +232,15 @@ const CategoryModal = ({ visible, onClose, allCount = 0, customCount = 0 }: Cate
 
           <FlatList
             data={categories}
-            extraData={selectedCatId}
+            extraData={selectedCategory}
             keyExtractor={(item) => item.category_id}
             renderItem={({ item }) => {
                
             return (
-                <Pressable  style={styles.categoryItem} onPress={() => setSelectedCatId(item.category_id)}>
+                <Pressable  style={styles.categoryItem} onPress={() => {
+                  onSelectCategory(item);
+                  handleClose();
+                  }}>
                     {/* Left */}
                     <View style={styles.leftContainer}>
 
@@ -256,7 +260,7 @@ const CategoryModal = ({ visible, onClose, allCount = 0, customCount = 0 }: Cate
                     </View>
                 
                     {/* Right */}
-                    {selectedCatId === item.category_id ? (
+                    {selectedCategory?.category_id === item.category_id ? (
                     <Ionicons
                      name="checkmark-circle"
                      size={24}

@@ -19,7 +19,7 @@ import {AppTheme} from '../theme/constant';
 import { fetchDashboardData } from '../api/services/dashboardService';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../store/user/userSlice';
-import { expenseData, setBudgetData, setRecentExpenses } from '../store/expenses/expenseSlice';
+import { expenseData, setBudgetData, setRecentExpenses, setTotalSpent } from '../store/expenses/expenseSlice';
 import { RootState } from '../store';
 
 
@@ -28,12 +28,6 @@ const TOTAL_SPENT = 24500;
 const REMAINING   = BUDGET - TOTAL_SPENT;
 const USED_PCT    = Math.round((TOTAL_SPENT / BUDGET) * 100);
 
-const recentActivities = [
-  {id: '1', icon: 'cart-outline',       title: 'Groceries',     subtitle: 'D-Mart',        amount: '₹1,250', time: '10:45 AM'},
-  {id: '2', icon: 'car-outline',        title: 'Transport',     subtitle: 'Uber Ride',     amount: '₹320',   time: '08:30 AM'},
-  {id: '3', icon: 'restaurant-outline', title: 'Food',          subtitle: 'McDonalds',     amount: '₹540',   time: '01:15 PM'},
-  {id: '4', icon: 'film-outline',       title: 'Entertainment', subtitle: 'Movie Ticket',  amount: '₹800',   time: '07:45 PM'},
-];
 
 
 const HomeScreen = () => {
@@ -45,7 +39,7 @@ const HomeScreen = () => {
 
 
   const { name } = useSelector((state :  RootState) => state.user);
-  const { budget, recentExpenses } = useSelector((state : RootState) => state.expense);
+  const { budget, recentExpenses, total_spent } = useSelector((state : RootState) => state.expense);
 
   //refresh  state 
   const [refreshing, setRefreshing] = useState(false);
@@ -56,7 +50,6 @@ const HomeScreen = () => {
 
   const fetchData = async() => {
     try{
-      console.log("\n\n\n Calling the Dashboard Data ..............")
       const resposne = await fetchDashboardData();
 
       if(resposne.data?.success){
@@ -66,6 +59,9 @@ const HomeScreen = () => {
 
         const recent_expenses  = resposne?.data?.data?.expenses;
         dispatch(setBudgetData({budget : user_data.budget ?? 0, peroid : user_data.peroid ?? ""}))
+
+        // set the amount spent data to redux 
+        dispatch(setTotalSpent(resposne?.data?.data?.total_spent ?? 0));
 
         // set expenses data here recent expenses 
         dispatch(setRecentExpenses(recent_expenses))
@@ -182,7 +178,9 @@ const HomeScreen = () => {
                     <SemiBoldText style={styles.summaryLabel}>Spent</SemiBoldText>
                   </View>
                   <BoldText style={styles.summaryAmount}>
-                    ₹{TOTAL_SPENT.toLocaleString()}
+                    {/* ₹{total_spent.toLocaleString()} */}
+
+                    {`₹ ${total_spent ?? 0}`}
                   </BoldText>
                 </View>
 
@@ -214,7 +212,7 @@ const HomeScreen = () => {
                     <SemiBoldText style={styles.summaryLabel}>Left</SemiBoldText>
                   </View>
                   <BoldText style={styles.summaryAmount}>
-                    ₹{REMAINING.toLocaleString()}
+                    ₹{ ( Number(budget) - Number(total_spent)).toLocaleString()}
                   </BoldText>
                 </View>
               </View>

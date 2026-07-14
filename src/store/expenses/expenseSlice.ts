@@ -18,17 +18,19 @@ export interface expenseData {
 interface expenseSlice {
     budget: string;
     peroid: string;
+    total_spent : number;
     recentExpenses : expenseData[];
 }
 
 const initialState : expenseSlice = {
     budget : "",
     peroid: "",
+    total_spent : 0,
     recentExpenses : [],
 }
 
-const userSlice  = createSlice({
-    name : "user",
+const expenseSlice  = createSlice({
+    name : "expense",
     initialState,
     reducers : {
 
@@ -38,6 +40,10 @@ const userSlice  = createSlice({
 
         setRecentExpenses : (state, action) =>{
             state.recentExpenses = action.payload
+        },
+
+        setTotalSpent : (state, action) =>{
+            state.total_spent = action.payload
         }
         
         
@@ -45,6 +51,6 @@ const userSlice  = createSlice({
 });
 
 
-export const {setBudgetData, setRecentExpenses} = userSlice.actions;
-export default userSlice.reducer;
+export const {setBudgetData, setRecentExpenses, setTotalSpent} = expenseSlice.actions;
+export default expenseSlice.reducer;
 

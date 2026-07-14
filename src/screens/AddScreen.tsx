@@ -9,11 +9,14 @@ import { useEffect, useState } from "react";
 import { addExpense } from "../api/services/expenseServices";
 import { getAllCategories } from "../api/services/categoryService";
 import CategoryModal from "../components/CategoryModal";
+import { categoryData } from "../store/category/categorySlice";
+import { useNavigation } from "@react-navigation/native";
 
 
 const AddScreen  = () => {
   const {theme} = useTheme();
   const styles = createstylesSheet(theme);
+  const navigation :any = useNavigation();
 
   const [loading, setLoading] = useState(false);
   const [openCategorymodal, setOpenCategoryModal] = useState(false);
@@ -23,17 +26,23 @@ const AddScreen  = () => {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [expenseDate, setExpenseDate] = useState("2026-07-09")
+  const[category, setCategory]  = useState<categoryData | null>(null);
+
 
   const handelAddExpense = async() => {
     if(loading) return;
 
     try{
       setLoading(true)
-      const resposne = await addExpense("6a4fbcfe5f94153e3fcff1f0",amount,  expenseDate, note  );
+      if(! category?.category_id || !amount || !expenseDate ) return;
+
+      const resposne = await addExpense(category.category_id,amount,  expenseDate, note  );
       if(resposne?.data?.success){
         // reset states
         setAmount("");
         setNote("");
+        setCategory(null);
+        navigation.navigate("HomeTabScreens")
       }
     }catch(error : any){
       console.log("error while aadding the expense", error?.resposne?.data )
@@ -78,7 +87,7 @@ const AddScreen  = () => {
           {/* Category */}
           <TouchableOpacity style={styles.inputContainer} onPress={() => setOpenCategoryModal(true)}>
             <Ionicons name="pricetag-outline" size={22} color={theme.colors.primary}/>
-            <RegularText style={{flex: 1, marginLeft: 15}} color={theme.colors.text}> Select Category</RegularText>
+            <RegularText style={{flex: 1, marginLeft: 15}} color={theme.colors.text}>{category?.category_id ? category.name : "Select category"}</RegularText>
             <Ionicons name="chevron-down" size={20} color={theme.colors.text} />
           </TouchableOpacity>
 
@@ -114,6 +123,8 @@ const AddScreen  = () => {
 
       <CategoryModal 
         visible={openCategorymodal} 
+        selectedCategory={category ?? null}
+        onSelectCategory={ setCategory}
         onClose={ () => setOpenCategoryModal(false)}   
         allCount={10}
         customCount={20}
