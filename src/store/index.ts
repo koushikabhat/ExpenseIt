@@ -3,6 +3,7 @@ import userReducer from "./user/userSlice";
 import authReducer from "./auth/authSlice"
 import expenseReducer from "./expenses/expenseSlice"
 import categoryReducer from "./category/categorySlice"
+import expenseHistoryReducer from "./expenses/historySlice"
 
 export const store = configureStore({
     reducer : {
@@ -10,6 +11,7 @@ export const store = configureStore({
         user : userReducer,
         expense : expenseReducer,
         category: categoryReducer,
+        history : expenseHistoryReducer,
     }
 });
 
