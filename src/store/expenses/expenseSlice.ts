@@ -15,11 +15,30 @@ export interface expenseData {
     expense_note?: string;
 }
 
+
+export interface categoryExpenseData {
+    expense_id: string;
+    amount: number;
+    note?: string;
+    created_at: string;
+}
+
+
 interface expenseSlice {
     budget: string;
     peroid: string;
     total_spent : number;
     recentExpenses : expenseData[];
+
+    categoryExpenses : categoryExpenseData[];
+
+    categoryExpensePagination: {
+        page: number;
+        limit: number;
+        total_items: number;
+        total_pages: number;
+        has_more: boolean;
+    } | null;
 }
 
 const initialState : expenseSlice = {
@@ -27,6 +46,11 @@ const initialState : expenseSlice = {
     peroid: "",
     total_spent : 0,
     recentExpenses : [],
+
+    categoryExpenses: [],
+    categoryExpensePagination: null,
+
+    
 }
 
 const expenseSlice  = createSlice({
@@ -44,13 +68,18 @@ const expenseSlice  = createSlice({
 
         setTotalSpent : (state, action) =>{
             state.total_spent = action.payload
-        }
+        },
+
+        setCategoryExpenses: (state, action) => {
+            state.categoryExpenses = action.payload.data;
+            state.categoryExpensePagination = action.payload.meta;
+        },
         
         
     }
 });
 
 
-export const {setBudgetData, setRecentExpenses, setTotalSpent} = expenseSlice.actions;
+export const {setBudgetData,setCategoryExpenses,  setRecentExpenses, setTotalSpent} = expenseSlice.actions;
 export default expenseSlice.reducer;
 

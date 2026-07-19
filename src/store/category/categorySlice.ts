@@ -1,8 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-
-
-
 export interface categoryData {
     category_id : string;
     name : string;
@@ -11,15 +8,25 @@ export interface categoryData {
     icon : string;
 }
 
+export interface categoryWiseAmount {
+    category_id : string;
+    category_name : string;
+    category_icon : string;
+    total_spent : any;
+}
+
+
 interface categorySlice {
     customCategories : categoryData[];
     categories : categoryData[];
+
+    categoryWiseAmount : categoryWiseAmount[];
 }
 
 const initialState : categorySlice = {
     customCategories : [],
     categories  : [],
-    
+    categoryWiseAmount : [],
 }
 
 const categoryslice  = createSlice({
@@ -33,6 +40,10 @@ const categoryslice  = createSlice({
 
         setCategories : (state, action) =>{
             state.categories = action.payload
+        },
+
+        setCategoryWiseAmount : (state, action) => {
+            state.categoryWiseAmount = action.payload;
         }
         
         
@@ -40,6 +51,6 @@ const categoryslice  = createSlice({
 });
 
 
-export const {setCustomCategory, setCategories} = categoryslice.actions;
+export const {setCustomCategory, setCategories, setCategoryWiseAmount} = categoryslice.actions;
 export default categoryslice.reducer;
 

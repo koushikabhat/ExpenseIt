@@ -15,3 +15,16 @@ export const getAllCategories = async() => {
     throw error;
    }
 }
+
+
+export const getCategoryWiseExpense = async() => {
+   try{
+
+      const response = await apiClient.get(apiUrls.getCategoryWiseAmount);
+      return response;
+
+   }catch(error  :any){
+      console.log("Erro occured ", error);
+      throw error;
+   }
+}

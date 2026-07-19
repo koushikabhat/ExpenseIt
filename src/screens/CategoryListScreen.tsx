@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -16,76 +16,60 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../theme/ThemeProvider';
 import {BoldText, RegularText, SemiBoldText} from '../utils/Texts';
 import {AppTheme} from '../theme/constant';
-
-// ─── Preset icons user can pick from ─────────────────────────────────────────
-
-const PRESET_ICONS = [
-  'restaurant-outline', 'car-outline',       'bag-handle-outline',
-  'receipt-outline',    'medical-outline',    'home-outline',
-  'airplane-outline',   'barbell-outline',    'book-outline',
-  'game-controller-outline', 'gift-outline',  'cafe-outline',
-  'phone-portrait-outline',  'shirt-outline', 'musical-notes-outline',
-  'paw-outline',        'school-outline',     'bicycle-outline',
-  'film-outline',       'cart-outline',
-];
-
-const PRESET_COLORS = [
-  '#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B',
-  '#10B981', '#EF4444', '#06B6D4', '#F97316',
-  '#84CC16', '#6366F1',
-];
-
-// ─── Sample data ──────────────────────────────────────────────────────────────
-
-const INITIAL_CATEGORIES = [
-  {id: '1', name: 'Food & Dining',  icon: 'restaurant-outline',   color: '#3B82F6', spent: 4500,  budget: 6000},
-  {id: '2', name: 'Transport',      icon: 'car-outline',           color: '#8B5CF6', spent: 3000,  budget: 4000},
-  {id: '3', name: 'Shopping',       icon: 'bag-handle-outline',    color: '#EC4899', spent: 4500,  budget: 5000},
-  {id: '4', name: 'Utilities',      icon: 'receipt-outline',       color: '#F59E0B', spent: 2250,  budget: 3000},
-  {id: '5', name: 'Health',         icon: 'medical-outline',       color: '#10B981', spent: 750,   budget: 2000},
-];
+import { useFocusEffect } from '@react-navigation/native';
+import { getCategoryWiseExpense } from '../api/services/categoryService';
+import { useDispatch, useSelector } from 'react-redux';
+import { setCategoryWiseAmount } from '../store/category/categorySlice';
+import { RootState } from '../store';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const CategoryListScreen = ({navigation}: any) => {
   const {theme} = useTheme();
   const styles  = createStyles(theme);
+  const dispatch = useDispatch();
 
-  const [categories, setCategories]     = useState(INITIAL_CATEGORIES);
+  const {categoryWiseAmount} = useSelector((s : RootState) => s.category);
+  const { budget} = useSelector((s : RootState) => s.expense);
+
+
   const [modalVisible, setModalVisible] = useState(false);
 
   // Modal state
-  const [name, setName]           = useState('');
-  const [selectedIcon, setIcon]   = useState(PRESET_ICONS[0]);
-  const [selectedColor, setColor] = useState(PRESET_COLORS[0]);
-  const [tab, setTab]             = useState<'icons' | 'emoji'>('icons');
-  const [emoji, setEmoji]         = useState('');
+  const [name, setName] = useState('');
 
   const resetModal = () => {
-    setName(''); setIcon(PRESET_ICONS[0]);
-    setColor(PRESET_COLORS[0]); setEmoji(''); setTab('icons');
+    // pass
   };
 
   const handleCreate = () => {
-    if (!name.trim()) return;
-    const newCat = {
-      id:     Date.now().toString(),
-      name:   name.trim(),
-      icon:   tab === 'emoji' ? '' : selectedIcon,
-      color:  selectedColor,
-      spent:  0,
-      budget: 0,
-      emoji:  tab === 'emoji' ? emoji : '',
-    };
-    setCategories(prev => [...prev, newCat]);
     resetModal();
     setModalVisible(false);
   };
 
-  // ── Category card ──────────────────────────────────────────────────────────
 
+  const fetchData = async() => {
+    try{
+      const response  = await getCategoryWiseExpense();
+      if(response?.data?.success){
+        dispatch(setCategoryWiseAmount(response?.data?.data));
+      }
+
+    }catch(error: any){
+      console.log("error occured", error?.response?.data)
+    }
+  }
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData()
+    }, [])
+  )
+
+
+  //  Category card 
   const renderItem = ({item}: any) => {
-    const pct = item.budget > 0 ? Math.round((item.spent / item.budget) * 100) : 0;
+    const pct = Number(budget) > 0 ? Math.round((item.total_spent / Number(budget)) * 100) : 0;
     return (
       <TouchableOpacity
         activeOpacity={0.75}
@@ -94,36 +78,33 @@ const CategoryListScreen = ({navigation}: any) => {
       >
         {/* Icon */}
         <View style={[styles.cardIcon, {backgroundColor: `${item.color}18`}]}>
-          {item.emoji
-            ? <BoldText style={{fontSize: 22}}>{item.emoji}</BoldText>
-            : <Ionicons name={item.icon} size={22} color={item.color} />
-          }
+          {item.emoji ? <BoldText style={{fontSize: 22}}>{item.category_icon}</BoldText> : <Ionicons name={item.category_icon} size={22} color={theme.banner.accent} />}
         </View>
 
         {/* Info */}
         <View style={styles.cardBody}>
           <View style={styles.cardTopRow}>
-            <BoldText color={theme.colors.text} style={{fontSize: 15}}>{item.name}</BoldText>
+            <BoldText color={theme.colors.text} style={{fontSize: 15}}>{item.category_name}</BoldText>
             <BoldText color={theme.colors.text} style={{fontSize: 14}}>
-              ₹{item.spent.toLocaleString()}
+              ₹{item.total_spent ?? 0}
             </BoldText>
           </View>
 
-          {item.budget > 0 && (
+          { Number(budget) > 0 && (
             <>
-              <View style={[styles.progressTrack, {backgroundColor: `${item.color}20`}]}>
-                <View style={[styles.progressFill, {width: `${Math.min(pct, 100)}%`, backgroundColor: item.color}]} />
+              <View style={[styles.progressTrack, {backgroundColor: theme.colors.background}]}>
+                <View style={[styles.progressFill, {width: `${Math.min(pct, 100)}%`, backgroundColor: theme.banner.accent}]} />
               </View>
               <View style={styles.cardBottomRow}>
                 <RegularText color={theme.colors.text} style={styles.metaText}>
-                  Budget ₹{item.budget.toLocaleString()}
+                  Budget ₹{ Number(budget) ?? 0}
                 </RegularText>
-                <SemiBoldText style={{fontSize: 11, color: item.color}}>{pct}% used</SemiBoldText>
+                <SemiBoldText style={{fontSize: 11, color: theme.colors.text}}>{pct}% used</SemiBoldText>
               </View>
             </>
           )}
 
-          {item.budget === 0 && (
+          {Number(budget) === 0 && (
             <RegularText color={theme.colors.text} style={styles.metaText}>
               No budget set
             </RegularText>
@@ -138,7 +119,7 @@ const CategoryListScreen = ({navigation}: any) => {
   return (
     <SafeAreaView style={[styles.container, {backgroundColor: theme.colors.background}]}>
 
-      {/* ── Gradient header ──────────────────────────────────────────────── */}
+      {/* ── Gradient header  */}
       <LinearGradient
         colors={[theme.banner.accent, theme.banner.accentSecondary]}
         start={{x: 0.0, y: 0.0}}
@@ -150,22 +131,22 @@ const CategoryListScreen = ({navigation}: any) => {
         <View style={styles.shineStreak} />
         <BoldText style={styles.headerTitle}>Categories</BoldText>
         <RegularText style={styles.headerSub}>
-          {categories.length} categories tracked
+          {categoryWiseAmount.length} categories tracked
         </RegularText>
       </LinearGradient>
 
-      {/* ── Body ─────────────────────────────────────────────────────────── */}
+      {/*  Body  */}
       <View style={[styles.body, {backgroundColor: theme.colors.background}]}>
         <FlatList
-          data={categories}
-          keyExtractor={item => item.id}
+          data={categoryWiseAmount}
+          keyExtractor={item => item.category_id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{paddingBottom: 100}}
         />
       </View>
 
-      {/* ── FAB ──────────────────────────────────────────────────────────── */}
+      {/* FAB  */}
       <TouchableOpacity
         onPress={() => setModalVisible(true)}
         activeOpacity={0.85}
@@ -180,7 +161,7 @@ const CategoryListScreen = ({navigation}: any) => {
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* ── Add Category Modal ────────────────────────────────────────────── */}
+      {/* ── Add Category Modal  */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -226,99 +207,11 @@ const CategoryListScreen = ({navigation}: any) => {
 
             {/* Color picker */}
             <SemiBoldText style={[styles.fieldLabel, {color: theme.colors.text}]}>Color</SemiBoldText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 18}}>
-              <View style={styles.colorRow}>
-                {PRESET_COLORS.map(c => (
-                  <TouchableOpacity
-                    key={c}
-                    onPress={() => setColor(c)}
-                    style={[
-                      styles.colorSwatch,
-                      {backgroundColor: c},
-                      selectedColor === c && styles.colorSwatchSelected,
-                    ]}
-                  >
-                    {selectedColor === c &&
-                      <Ionicons name="checkmark" size={14} color="#fff" />
-                    }
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            {/* Icon / Emoji tab toggle */}
-            <View style={[styles.tabRow, {backgroundColor: theme.colors.background}]}>
-              {(['icons', 'emoji'] as const).map(t => (
-                <TouchableOpacity
-                  key={t}
-                  onPress={() => setTab(t)}
-                  style={[
-                    styles.tabBtn,
-                    tab === t && {backgroundColor: selectedColor},
-                  ]}
-                >
-                  <SemiBoldText style={{
-                    fontSize: 13,
-                    color: tab === t ? '#fff' : theme.colors.text,
-                  }}>
-                    {t === 'icons' ? '🎨 Icons' : '😊 Emoji'}
-                  </SemiBoldText>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Icon grid */}
-            {tab === 'icons' && (
-              <ScrollView style={styles.iconScroll} showsVerticalScrollIndicator={false}>
-                <View style={styles.iconGrid}>
-                  {PRESET_ICONS.map(ic => (
-                    <TouchableOpacity
-                      key={ic}
-                      onPress={() => setIcon(ic)}
-                      style={[
-                        styles.iconCell,
-                        {backgroundColor: theme.colors.background},
-                        selectedIcon === ic && {backgroundColor: selectedColor},
-                      ]}
-                    >
-                      <Ionicons
-                        name={ic}
-                        size={22}
-                        color={selectedIcon === ic ? '#fff' : theme.colors.text}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            )}
-
-            {/* Emoji input */}
-            {tab === 'emoji' && (
-              <View style={styles.emojiWrap}>
-                <TextInput
-                  value={emoji}
-                  onChangeText={t => setEmoji(t.slice(-2))}
-                  placeholder="Paste or type an emoji  e.g. 🍕"
-                  placeholderTextColor={`${theme.colors.text}55`}
-                  style={[styles.nameInput, {
-                    color: theme.colors.text,
-                    backgroundColor: theme.colors.background,
-                    borderColor: theme.colors.border,
-                    fontSize: 22,
-                  }]}
-                />
-                {emoji !== '' && (
-                  <View style={[styles.emojiPreview, {backgroundColor: `${selectedColor}18`}]}>
-                    <BoldText style={{fontSize: 40}}>{emoji}</BoldText>
-                  </View>
-                )}
-              </View>
-            )}
 
             {/* Create button */}
             <TouchableOpacity onPress={handleCreate} activeOpacity={0.85} style={{marginTop: 14}}>
               <LinearGradient
-                colors={[selectedColor, theme.banner.accentSecondary]}
+                colors={[ theme.banner.accentSecondary]}
                 start={{x: 0, y: 0}} end={{x: 1, y: 0}}
                 style={styles.createBtn}
               >
@@ -339,8 +232,7 @@ const CategoryListScreen = ({navigation}: any) => {
 
 export default CategoryListScreen;
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
+// Styles 
 const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
     container: {flex: 1},

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -12,6 +12,13 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../theme/ThemeProvider';
 import {BoldText, RegularText, SemiBoldText} from '../utils/Texts';
 import {AppTheme} from '../theme/constant';
+import { useFocusEffect } from '@react-navigation/native';
+import { fetchExpenseForCategoryId } from '../api/services/expenseServices';
+import { useRoute } from "@react-navigation/native";
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { setCategoryExpenses } from '../store/expenses/expenseSlice';
+import dayjs from "dayjs";
 
 // ─── Sample data ──────────────────────────────────────────────────────────────
 
@@ -35,17 +42,31 @@ const TRANSACTIONS = [
 
 const FILTERS = ['All', 'This Week', 'This Month', 'Last Month'];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+//  Component 
 
 const CategoryDetailScreen = () => {
-  const {theme}                     = useTheme();
-  const styles                      = createStyles(theme);
+  const {theme} = useTheme();
+  const styles = createStyles(theme);
+
+  const route = useRoute();
+  const dispatch = useDispatch();
+  const { category } = route.params as {category : any};
+  const { budget, categoryExpenses, categoryExpensePagination } = useSelector((state: RootState) => state.expense);
+
+
+  const categoryId = category.category_id;
+  const categoryName = category.category_name;
+  const categoryIcon = category.category_icon;
+  const spent_amount = category.total_spent;
+
+
+
   const [activeFilter, setFilter]   = useState('All');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notes, setNotes]           = useState<Record<string, string>>({});
   const [editingId, setEditingId]   = useState<string | null>(null);
 
-  const usedPct = Math.round((CATEGORY.totalSpent / CATEGORY.budget) * 100);
+  const usedPct = Math.round((Number(spent_amount) / Number(budget)) * 100);
 
   const handleCardPress = (id: string) =>
     setExpandedId(prev => (prev === id ? null : id));
@@ -55,12 +76,42 @@ const CategoryDetailScreen = () => {
     setEditingId(null);
   };
 
-  // ── Card ──────────────────────────────────────────────────────────────────
 
+  const fetchData = async() =>{
+    try{
+
+      if(!categoryId) return;
+
+      const response = await fetchExpenseForCategoryId(categoryId);
+
+      if(response?.data?.success){
+        dispatch(
+          setCategoryExpenses({
+              data: response.data.data,
+              meta: response.data.meta,
+          })
+      );
+      }
+
+    }catch(error : any){
+      console.log("Error occured while fetching the data")
+    }
+  }
+
+  useFocusEffect(useCallback(() => {
+    fetchData();
+  }, []))
+
+
+ 
   const renderItem = ({item, index}: any) => {
     const isExpanded = expandedId === item.id;
     const savedNote  = notes[item.id] ?? item.note;
     const isEditing  = editingId === item.id;
+
+    const formattedDate = dayjs(item.created_at).format("DD MMM YYYY");
+    const formattedTime = dayjs(item.created_at).format("hh:mm A");
+  
 
     return (
       <TouchableOpacity
@@ -76,23 +127,23 @@ const CategoryDetailScreen = () => {
         <View style={styles.cardRow}>
           {/* Icon */}
           <View style={[styles.cardIcon, {backgroundColor: `${CATEGORY.color}18`}]}>
-            <Ionicons name={CATEGORY.icon} size={20} color={CATEGORY.color} />
+            <Ionicons name={categoryIcon} size={20} color={theme.banner.accent} />
           </View>
 
           {/* Title + date */}
           <View style={styles.cardMid}>
             <BoldText color={theme.colors.text} style={{fontSize: 14}}>
-              {item.title || 'Expense'}
+              {item.note || ` ${categoryName} Expense`}
             </BoldText>
             <RegularText color={theme.colors.text} style={styles.cardDate}>
-              {item.date}  ·  {item.time}
+              {formattedDate}  {formattedTime}
             </RegularText>
           </View>
 
           {/* Amount + chevron */}
           <View style={styles.cardRight}>
             <BoldText color={theme.colors.text} style={{fontSize: 15}}>
-              ₹{item.amount.toLocaleString()}
+              ₹{Number(item.amount)}
             </BoldText>
             <Ionicons
               name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -147,7 +198,7 @@ const CategoryDetailScreen = () => {
     );
   };
 
-  // ── Header component for FlatList ─────────────────────────────────────────
+  //  Header component for FlatList 
 
   const ListHeader = () => (
     <>
@@ -165,11 +216,11 @@ const CategoryDetailScreen = () => {
         {/* Category name + icon */}
         <View style={styles.catRow}>
           <View style={styles.headerIcon}>
-            <Ionicons name={CATEGORY.icon} size={26} color="#fff" />
+            <Ionicons name={categoryIcon} size={26} color="#fff" />
           </View>
           <View style={{marginLeft: 14}}>
             <RegularText style={styles.headerSub}>Category</RegularText>
-            <BoldText style={styles.headerTitle}>{CATEGORY.name}</BoldText>
+            <BoldText style={styles.headerTitle}>{categoryName}</BoldText>
           </View>
         </View>
 
@@ -177,12 +228,12 @@ const CategoryDetailScreen = () => {
         <View style={styles.amountRow}>
           <View>
             <RegularText style={styles.amountLabel}>Total Spent</RegularText>
-            <BoldText style={styles.amountValue}>₹{CATEGORY.totalSpent.toLocaleString()}</BoldText>
+            <BoldText style={styles.amountValue}>₹{Number(spent_amount)}</BoldText>
           </View>
           <View style={styles.amountDivider} />
           <View>
             <RegularText style={styles.amountLabel}>Budget Set</RegularText>
-            <BoldText style={styles.amountValue}>₹{CATEGORY.budget.toLocaleString()}</BoldText>
+            <BoldText style={styles.amountValue}>₹{Number(budget)}</BoldText>
           </View>
         </View>
 
@@ -238,8 +289,8 @@ const CategoryDetailScreen = () => {
   return (
     <SafeAreaView style={[styles.container, {backgroundColor: theme.colors.background}]}>
       <FlatList
-        data={TRANSACTIONS}
-        keyExtractor={item => item.id}
+        data={categoryExpenses}
+        keyExtractor={item => item.expense_id}
         renderItem={renderItem}
         ListHeaderComponent={ListHeader}
         showsVerticalScrollIndicator={false}
@@ -251,7 +302,6 @@ const CategoryDetailScreen = () => {
 
 export default CategoryDetailScreen;
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const createStyles = (theme: AppTheme) =>
   StyleSheet.create({

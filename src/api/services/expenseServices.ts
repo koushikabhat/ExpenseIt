@@ -27,3 +27,16 @@ export const addExpense = async(
     throw error;
    }
 }
+
+
+export const fetchExpenseForCategoryId = async(category_id : string) => {
+    if(!category_id) return;
+
+    try{
+        const response = await apiClient.get(`${apiUrls.getExpenses}/category/${category_id}`)
+        return response;
+
+    }catch(error : any){
+        throw error;
+    }   
+}
