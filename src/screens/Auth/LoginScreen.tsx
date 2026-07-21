@@ -21,6 +21,7 @@ import { login } from '../../api/services/authService';
 import { useTheme } from '../../theme/ThemeProvider';
 import { setCredentials } from '../../store/auth/authSlice';
 import { storage } from '../../storage/mmkv';
+import { useToast } from '../../Toast/ToastProvider';
 
 // ── Drop your cropped images here ────────────────────────────────────────────
 const LOGO_ICON = require('../../assets/images/logo_image.png');   // rounded square
@@ -40,6 +41,7 @@ const GREEN_2    = '#06D6A0';  // matches logo gradient end
 const LoginScreen = ({navigation}: any) => {
 
   const {theme} = useTheme();
+  const {SuccessToast} = useToast();
 
   const dispatch = useDispatch();
   const { email, password } = useSelector((state : any) => state.user);
@@ -82,6 +84,8 @@ const LoginScreen = ({navigation}: any) => {
           refresh_expires_in: data.refresh_expires_in,
           isAuthenticated : true
         }))
+
+        SuccessToast("Login Successfull")
       }
     }
     catch(error){

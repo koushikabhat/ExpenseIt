@@ -8,6 +8,7 @@ import { Provider, useSelector } from 'react-redux';
 import { RootState, store } from './src/store';
 import { useAppBootstrap } from './src/hooks/useAppBootsrap';
 import AuthNavigator from './src/navigation/AuthNavigator';
+import { ToastProvider } from './src/Toast/ToastProvider';
 
 
 const AppContent = () => {
@@ -30,11 +31,13 @@ const AppContent = () => {
 function App() {
   return (
     <Provider store={store}>
+      <ToastProvider>
       <SafeAreaProvider>
         <ThemeProvider>
           <AppContent/>
         </ThemeProvider>
       </SafeAreaProvider>
+      </ToastProvider>
     </Provider>
   );
 }
