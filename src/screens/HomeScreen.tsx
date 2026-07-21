@@ -21,6 +21,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../store/user/userSlice';
 import { expenseData, setBudgetData, setRecentExpenses, setTotalSpent } from '../store/expenses/expenseSlice';
 import { RootState } from '../store';
+import BudgetModal from '../components/Home/BudgetBottomModal';
+import CategoryModal from '../components/Home/CategoryBottomModal';
 
 
 const BUDGET      = 50000;
@@ -39,10 +41,13 @@ const HomeScreen = () => {
 
 
   const { name } = useSelector((state :  RootState) => state.user);
-  const { budget, recentExpenses, total_spent } = useSelector((state : RootState) => state.expense);
+  const { budget, recentExpenses, total_spent, peroid } = useSelector((state : RootState) => state.expense);
 
   //refresh  state 
   const [refreshing, setRefreshing] = useState(false);
+
+  const[openBudgetModal , setBudgetModal] = useState<boolean>(false);
+  const [openCategoryModal, setCategoryModal] = useState<boolean>(false);
 
 
   // Progress bar color reacts to how much budget is consumed
@@ -178,8 +183,6 @@ const HomeScreen = () => {
                     <SemiBoldText style={styles.summaryLabel}>Spent</SemiBoldText>
                   </View>
                   <BoldText style={styles.summaryAmount}>
-                    {/* ₹{total_spent.toLocaleString()} */}
-
                     {`₹ ${total_spent ?? 0}`}
                   </BoldText>
                 </View>
@@ -245,8 +248,8 @@ const HomeScreen = () => {
               <QuickActions
                 theme={theme}
                 onAddExpense={() => navigation.navigate('AddScreen')}
-                onSetupBudget={() => navigation.navigate('BudgetScreen')}
-                onSetupCategory={() => navigation.navigate('CategoryListScreen')}
+                onSetupBudget={() => setBudgetModal(true)}
+                onSetupCategory={() => setCategoryModal(true)}
                 onViewCategories={() => navigation.navigate('CategoryListScreen')}
               />
 
@@ -265,6 +268,20 @@ const HomeScreen = () => {
             </View>
           </>
         }
+      />
+
+      <BudgetModal
+        visible={openBudgetModal}
+        onClose={() => setBudgetModal(false)}
+        selectedBudget={budget}
+        selectedPeroid={peroid}
+        onsetBudget={(budget, peroid) => dispatch(setBudgetData({ budget, peroid }))}
+      />
+
+      <CategoryModal
+        visible={openCategoryModal}
+        onClose={() => setCategoryModal(false)}
+
       />
     </SafeAreaView>
   );
