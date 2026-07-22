@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,85 +15,28 @@ import Svg, { Circle } from 'react-native-svg';
 import { AppTheme } from "../theme/constant"; // adjust path
 import { useTheme } from '../theme/ThemeProvider';
 import { useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { getOverviewData } from '../api/services/overviewService';
+import { setOverviewData } from '../store/expenses/expenseSlice';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_GAP = 10;
 const CHIP_WIDTH = (SCREEN_WIDTH - 32 - CARD_GAP) / 2; // 2-column grid with 16px side padding
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+const CATEGORY_COLORS = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#06B6D4', '#F97316'];
+const getColor = (index: number) => CATEGORY_COLORS[index % CATEGORY_COLORS.length];
 
-export interface Category {
+
+interface DonutCategory {
   id: string;
   name: string;
-  icon: string;
+  percentage: number;
   color: string;
-  amount: number;
-  percentage: number;  // 0–100; must sum to 100 across all categories
-  lastDate: string;
-  transactions: number;
 }
 
-
-
-// ─── Default sample data (swap with live data) ────────────────────────────────
-
-const DEFAULT_CATEGORIES: Category[] = [
-  {
-    id: '1',
-    name: 'Food & Dining',
-    icon: 'restaurant-outline',
-    color: '#3B82F6',
-    amount: 4500,
-    percentage: 30,
-    lastDate: 'Today, 2:30 PM',
-    transactions: 12,
-  },
-  {
-    id: '2',
-    name: 'Transport',
-    icon: 'car-outline',
-    color: '#8B5CF6',
-    amount: 3000,
-    percentage: 20,
-    lastDate: 'Yesterday',
-    transactions: 8,
-  },
-  {
-    id: '3',
-    name: 'Shopping',
-    icon: 'bag-handle-outline',
-    color: '#EC4899',
-    amount: 4500,
-    percentage: 30,
-    lastDate: 'Jun 18',
-    transactions: 5,
-  },
-  {
-    id: '4',
-    name: 'Utilities',
-    icon: 'receipt-outline',
-    color: '#F59E0B',
-    amount: 2250,
-    percentage: 15,
-    lastDate: 'Jun 15',
-    transactions: 3,
-  },
-  {
-    id: '5',
-    name: 'Health',
-    icon: 'medical-outline',
-    color: '#10B981',
-    amount: 750,
-    percentage: 5,
-    lastDate: 'Jun 12',
-    transactions: 2,
-  },
-];
-
-// ─── Donut chart ──────────────────────────────────────────────────────────────
-
 interface DonutChartProps {
-  categories: Category[];
+  categories: DonutCategory[];
   size?: number;
   strokeWidth?: number;
   isDark: boolean;
@@ -153,53 +96,69 @@ const DonutChart: React.FC<DonutChartProps> = ({
   );
 };
 
-// ─── Overview screen ──────────────────────────────────────────────────────────
-const OverviewScreen  = ({
-  totalBudget = 20000,
-  categories = DEFAULT_CATEGORIES,
-  onCategoryPress,
-  onNotificationPress,
-} : any) => {
+// ─── Overview screen ────────────────────────────────────────────────────────
 
-  const {theme} = useTheme();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+const OverviewScreen = () => {
+
+  const { theme } = useTheme();
   const styles = getStyles(theme);
-  const navigation : any = useNavigation();
+  const dispatch = useDispatch();
+  const navigation: any = useNavigation();
 
-  // Derived values
-  const totalSpent = categories.reduce((sum, c) => sum + c.amount, 0);
-  const remaining = totalBudget - totalSpent;
-  const usedPct = Math.round((totalSpent / totalBudget) * 100);
-  const majorCat = [...categories].sort((a, b) => b.amount - a.amount)[0];
+  const { budget, total_spent, overviewExpenseData } = useSelector( (state: RootState) => state.expense);
+  const { categoryWiseAmount } = useSelector(
+    (state: RootState) => state.category
+  );
+
+  const remaining = Number(budget) - Number(total_spent);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+ 
+  const donutCategories: DonutCategory[] = overviewExpenseData.map((cat, index) => ({
+    id: cat.category_id,
+    name: cat.category_name,
+    percentage: cat.percentage,
+    color: getColor(index),
+  }));
+
+  
+  const topCategories = categoryWiseAmount.slice(0, 3).map((cat, index) => ({
+    id: cat.category_id,
+    name: cat.category_name,
+    icon: cat.category_icon,
+    amount: cat.total_spent,
+    color: getColor(index),
+  }));
+
+  const totalSpent = overviewExpenseData.reduce((sum, c) => sum + c.total_spent, 0);
+  const usedPct =  Math.round((Number(total_spent) / Number(budget)) * 100);
+  const majorCat = donutCategories[0]; // API returns them sorted, first is fine for now
 
   // Determine if theme looks dark by checking background darkness
   const isDark = theme.colors.background.startsWith('#0') || theme.colors.background.startsWith('#1');
-
-  // Progress bar status color
-  const progressColor = usedPct >= 90 ? theme.colors.danger : usedPct >= 70 ? '#F59E0B' : theme.banner.accent;
 
   // Stat chips config
   const STATS = [
     {
       label: 'Budget',
-      value: `₹${totalBudget.toLocaleString()}`,
+      value: `₹${Number(budget || 0).toLocaleString()}`,
       sub: 'Monthly limit',
       icon: 'wallet-outline',
       color: theme.banner.accent,
     },
     {
       label: 'Spent',
-      value: `₹${totalSpent.toLocaleString()}`,
+      value: `₹${Number(total_spent || 0).toLocaleString()}`,
       sub: `${usedPct}% used`,
       icon: 'trending-down-outline',
       color: theme.colors.danger,
     },
     {
       label: 'Major',
-      value: majorCat.name.split(' ')[0],
-      sub: `₹${majorCat.amount.toLocaleString()}`,
-      icon: majorCat.icon,
-      color: majorCat.color,
+      value: majorCat ? majorCat.name.split(' ')[0] : '—',
+      sub: majorCat ? `${majorCat.percentage}%` : '',
+      icon: 'pricetag-outline',
+      color: majorCat ? majorCat.color : theme.colors.text,
     },
     {
       label: 'Remaining',
@@ -210,14 +169,27 @@ const OverviewScreen  = ({
     },
   ];
 
-  const handleCategoryPress = (cat: Category) => {
+  const handleCategoryPress = (cat: any) => {
     setSelectedId(cat.id === selectedId ? null : cat.id);
-    onCategoryPress?.(cat);
   };
+
+  const fetchOverviewData = async () => {
+    try {
+      const response = await getOverviewData();
+      if (response?.data?.success) {
+        dispatch(setOverviewData(response.data.data));
+      }
+    } catch (error: any) {
+      console.log('Error fetching overview data', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOverviewData();
+  }, []);
 
   return (
     <SafeAreaView style={styles.root}>
-      {/* <StatusBar barStyle="light-content" backgroundColor={theme.banner.accent} translucent /> */}
 
       <ScrollView
         style={styles.scroll}
@@ -242,7 +214,7 @@ const OverviewScreen  = ({
               <Text style={styles.greeting}>Good morning 👋</Text>
               <Text style={styles.screenTitle}>Overview</Text>
             </View>
-            <TouchableOpacity style={styles.notifBtn} onPress={onNotificationPress} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.notifBtn} onPress={() => {}} activeOpacity={0.8}>
               <Ionicons name="notifications-outline" size={20} color="#fff" />
               <View style={styles.notifDot} />
             </TouchableOpacity>
@@ -261,14 +233,13 @@ const OverviewScreen  = ({
           <Text style={styles.headerProgressLabel}>{usedPct}% of monthly budget used</Text>
         </LinearGradient>
 
-        {/* ── Lifted body panel ─────────────────────────────────────────────── */}
+
         <View style={styles.body}>
 
-          {/* ── 2×2 Stat chips ─────────────────────────────────────────────── */}
+          {/* Stats */}
           <View style={styles.chipsGrid}>
             {STATS.map((stat, i) => (
               <View key={i} style={[styles.chip, { backgroundColor: theme.colors.card }]}>
-                {/* Subtle tinted top-left corner accent */}
                 <View style={[styles.chipAccentCorner, { backgroundColor: `${stat.color}18` }]} />
                 <View style={[styles.chipIconWrap, { backgroundColor: `${stat.color}18` }]}>
                   <Ionicons name={stat.icon as any} size={18} color={stat.color} />
@@ -284,7 +255,6 @@ const OverviewScreen  = ({
 
           {/* ── Spending breakdown: donut + legend ─────────────────────────── */}
           <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-            {/* Card header */}
             <View style={styles.cardHeader}>
               <View>
                 <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
@@ -296,15 +266,14 @@ const OverviewScreen  = ({
               </View>
               <View style={[styles.badge, { backgroundColor: `${theme.banner.accent}18` }]}>
                 <Ionicons name="pie-chart-outline" size={12} color={theme.banner.accent} />
-                <Text style={[styles.badgeText, { color: theme.banner.accent }]}>  {categories.length} cats</Text>
+                <Text style={[styles.badgeText, { color: theme.banner.accent }]}>  {donutCategories.length} cats</Text>
               </View>
             </View>
 
-            {/* Donut + legend side by side */}
             <View style={styles.donutRow}>
               {/* Donut */}
               <View style={styles.donutWrap}>
-                <DonutChart categories={categories} size={154} strokeWidth={24} isDark={isDark} />
+                <DonutChart categories={donutCategories} size={154} strokeWidth={24} isDark={isDark} />
                 <View style={styles.donutCenter}>
                   <Text style={[styles.donutCenterAmount, { color: theme.colors.text }]}>
                     ₹{(totalSpent / 1000).toFixed(1)}k
@@ -315,7 +284,7 @@ const OverviewScreen  = ({
 
               {/* Legend */}
               <View style={styles.legend}>
-                {categories.map((cat) => (
+                {donutCategories.map((cat) => (
                   <View key={cat.id} style={styles.legendRow}>
                     <View style={[styles.legendDot, { backgroundColor: cat.color }]} />
                     <Text
@@ -333,7 +302,7 @@ const OverviewScreen  = ({
             </View>
           </View>
 
-          {/* ── Category cards ──────────────────────────────────────────────── */}
+          {/* ── Category cards (top 3) ───────────────────────────────────── */}
           <View style={styles.catSectionHeader}>
             <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Categories</Text>
             <TouchableOpacity style={styles.seeAllBtn} onPress={() => navigation.navigate("CategoryListScreen")} activeOpacity={0.7}>
@@ -342,7 +311,7 @@ const OverviewScreen  = ({
             </TouchableOpacity>
           </View>
 
-          {categories.map((cat) => {
+          {topCategories.map((cat) => {
             const isSelected = selectedId === cat.id;
             return (
               <TouchableOpacity
@@ -360,50 +329,15 @@ const OverviewScreen  = ({
                   colors={[`${cat.color}30`, `${cat.color}10`]}
                   style={styles.catIconGradient}
                 >
-                  <Ionicons name={cat.icon as any} size={22} color={cat.color} />
+                  <Ionicons name={(cat.icon || 'pricetag-outline') as any} size={22} color={cat.color} />
                 </LinearGradient>
 
                 {/* Centre: info */}
                 <View style={styles.catBody}>
-                  {/* Row 1: name + amount */}
                   <View style={styles.catTopRow}>
                     <Text style={[styles.catName, { color: theme.colors.text }]}>{cat.name}</Text>
                     <Text style={[styles.catAmount, { color: theme.colors.text }]}>
-                      ₹{cat.amount.toLocaleString()}
-                    </Text>
-                  </View>
-
-                  {/* Progress bar */}
-                  <View
-                    style={[
-                      styles.catProgressTrack,
-                      { backgroundColor: `${cat.color}1A` },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.catProgressFill,
-                        { width: `${cat.percentage}%`, backgroundColor: cat.color },
-                      ]}
-                    />
-                  </View>
-
-                  {/* Row 2: meta */}
-                  <View style={styles.catMetaRow}>
-                    <View style={styles.catMetaItem}>
-                      <Ionicons name="time-outline" size={11} color={theme.colors.text} style={{ opacity: 0.45 }} />
-                      <Text style={[styles.catMetaText, { color: theme.colors.text }]}>
-                        {' '}{cat.lastDate}
-                      </Text>
-                    </View>
-                    <View style={styles.catMetaItem}>
-                      <Ionicons name="receipt-outline" size={11} color={theme.colors.text} style={{ opacity: 0.45 }} />
-                      <Text style={[styles.catMetaText, { color: theme.colors.text }]}>
-                        {' '}{cat.transactions} txns
-                      </Text>
-                    </View>
-                    <Text style={[styles.catPctBadge, { color: cat.color }]}>
-                      {cat.percentage}%
+                      ₹{Number(cat.amount).toLocaleString()}
                     </Text>
                   </View>
                 </View>
@@ -424,9 +358,7 @@ const OverviewScreen  = ({
   );
 };
 
-
 export default OverviewScreen;
-// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const getStyles = (theme: AppTheme) =>
   StyleSheet.create({
@@ -567,7 +499,6 @@ const getStyles = (theme: AppTheme) =>
       borderRadius: 18,
       padding: 14,
       overflow: 'hidden',
-      // shadow
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.07,
@@ -754,33 +685,6 @@ const getStyles = (theme: AppTheme) =>
     },
     catAmount: {
       fontSize: 15,
-      fontWeight: '700',
-    },
-    catProgressTrack: {
-      height: 5,
-      borderRadius: 3,
-      overflow: 'hidden',
-    },
-    catProgressFill: {
-      height: '100%',
-      borderRadius: 3,
-    },
-    catMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    catMetaItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    catMetaText: {
-      fontSize: 11,
-      opacity: 0.45,
-    },
-    catPctBadge: {
-      marginLeft: 'auto',
-      fontSize: 11,
       fontWeight: '700',
     },
   });

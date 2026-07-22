@@ -24,9 +24,18 @@ export interface categoryExpenseData {
 }
 
 
+export interface OverviewCategoryData {
+    total_spent: number;
+    category_id: string;
+    category_name: string;
+    percentage: number;
+}
+
+
+export type Period = "weekly"| "monthly" | "yearly"  | ""
 interface expenseSlice {
     budget: string;
-    peroid: string;
+    peroid: Period;
     total_spent : number;
     recentExpenses : expenseData[];
 
@@ -39,6 +48,9 @@ interface expenseSlice {
         total_pages: number;
         has_more: boolean;
     } | null;
+
+
+    overviewExpenseData : OverviewCategoryData [];
 }
 
 const initialState : expenseSlice = {
@@ -49,6 +61,11 @@ const initialState : expenseSlice = {
 
     categoryExpenses: [],
     categoryExpensePagination: null,
+
+
+    // for overview screen 
+    
+    overviewExpenseData  : [],
 
     
 }
@@ -74,12 +91,16 @@ const expenseSlice  = createSlice({
             state.categoryExpenses = action.payload.data;
             state.categoryExpensePagination = action.payload.meta;
         },
+
+        setOverviewData : (state, action) =>{
+            state.overviewExpenseData = action.payload
+        }
         
         
     }
 });
 
 
-export const {setBudgetData,setCategoryExpenses,  setRecentExpenses, setTotalSpent} = expenseSlice.actions;
+export const {setBudgetData,setCategoryExpenses,  setRecentExpenses, setTotalSpent, setOverviewData} = expenseSlice.actions;
 export default expenseSlice.reducer;
 
